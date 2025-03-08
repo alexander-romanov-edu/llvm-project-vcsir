@@ -1,0 +1,11 @@
+#ifndef LLVM_LIB_TARGET_VCSIR_TARGETINFO_VCSIRTARGETINFO_H
+#define LLVM_LIB_TARGET_VCSIR_TARGETINFO_VCSIRTARGETINFO_H
+namespace llvm {
+
+class Target;
+
+Target& getTheVCSIRTarget();
+
+} // end namespace llvm
+#endif // end LLVM_LIB_TARGET_VCSIR_TARGETINFO_VCSIRTARGETINFO_H
+
