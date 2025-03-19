@@ -4,7 +4,9 @@
 #include "Sim.h"
 #include "SimFrameLowering.h"
 #include "SimISelLowering.h"
+#include "SimInstrInfo.h"
 #include "SimRegisterInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -16,6 +18,8 @@ class SimSubtarget : public SimGenSubtargetInfo {
   SimTargetLowering TLInfo;
   SimFrameLowering FrameLowering;
   SimRegisterInfo RegInfo;
+  SimInstrInfo InstrInfo;
+  SelectionDAGTargetInfo TSInfo;
 
 public:
   SimSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
@@ -36,6 +40,11 @@ public:
   const SimRegisterInfo *getRegisterInfo() const override {
     SIM_DUMP_CYAN
     return &RegInfo;
+  }
+  const SimInstrInfo *getInstrInfo() const override { return &InstrInfo; }
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
+    SIM_DUMP_CYAN
+    return &TSInfo;
   }
 };
 
