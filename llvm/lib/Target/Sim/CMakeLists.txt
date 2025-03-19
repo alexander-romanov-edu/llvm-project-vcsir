@@ -6,6 +6,7 @@ tablegen(LLVM SimGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM SimGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM SimGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM SimGenMCPseudoLowering.inc -gen-pseudo-lowering)
+tablegen(LLVM SimGenDAGISel.inc -gen-dag-isel)
 
 add_public_tablegen_target(SimCommonTableGen)
 
@@ -15,6 +16,7 @@ add_llvm_target(SimCodeGen
   SimInstrInfo.cpp
   SimSubtarget.cpp
   SimAsmPrinter.cpp
+  SimISelDagToDag.cpp
 
   LINK_COMPONENTS
   CodeGen
@@ -23,6 +25,7 @@ add_llvm_target(SimCodeGen
   Target
   SimInfo
   AsmPrinter
+  SelectionDAG
 
   ADD_TO_COMPONENT
   Sim

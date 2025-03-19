@@ -3,6 +3,7 @@
 
 #include "MCTargetDesc/SimMCTargetDesc.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 
 #define SIM_DUMP(Color)                                                        \
   {                                                                            \
@@ -18,5 +19,12 @@
 #define SIM_DUMP_CYAN SIM_DUMP(llvm::raw_ostream::CYAN)
 #define SIM_DUMP_MAGENTA SIM_DUMP(llvm::raw_ostream::MAGENTA)
 #define SIM_DUMP_WHITE SIM_DUMP(llvm::raw_ostream::WHITE)
+namespace llvm {
+class SimTargetMachine;
+class FunctionPass;
+
+FunctionPass *createSimISelDag(SimTargetMachine &TM, CodeGenOptLevel OptLevel);
+
+} // namespace llvm
 
 #endif // LLVM_LIB_TARGET_Sim_Sim_H

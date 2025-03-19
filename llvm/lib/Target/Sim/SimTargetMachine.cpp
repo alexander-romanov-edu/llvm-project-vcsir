@@ -34,8 +34,13 @@ public:
   SimPassConfig(SimTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {}
 
+  SimTargetMachine &getSimTargetMachine() const {
+    return getTM<SimTargetMachine>();
+  }
+
   bool addInstSelector() override {
     SIM_DUMP_CYAN
+    addPass(createSimISelDag(getSimTargetMachine(), getOptLevel()));
     return false;
   }
 };
