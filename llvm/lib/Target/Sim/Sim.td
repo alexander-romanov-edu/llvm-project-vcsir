@@ -1,6 +1,7 @@
 include "llvm/Target/Target.td"
 include "SimRegisterInfo.td"
 include "SimInstrInfo.td"
+include "SimCallingConv.td"
 
 class Proc<string Name, list<SubtargetFeature> Features>
  : Processor<Name, NoItineraries, Features>;

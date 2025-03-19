@@ -7,6 +7,7 @@ tablegen(LLVM SimGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM SimGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM SimGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM SimGenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM SimGenCallingConv.inc -gen-callingconv)
 
 add_public_tablegen_target(SimCommonTableGen)
 
