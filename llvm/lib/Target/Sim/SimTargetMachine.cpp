@@ -23,7 +23,8 @@ SimTargetMachine::SimTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, "e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32",
                                TT, CPU, FS, Options, Reloc::Static,
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
+      Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   SIM_DUMP_CYAN
   initAsmInfo();
 }
