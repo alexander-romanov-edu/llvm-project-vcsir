@@ -22,7 +22,19 @@
 namespace llvm {
 class SimTargetMachine;
 class FunctionPass;
+class SimSubtarget;
+class AsmPrinter;
+class InstructionSelector;
+class MCInst;
+class MCOperand;
+class MachineInstr;
+class MachineOperand;
+class PassRegistry;
 
+bool lowerSimMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
+                                  AsmPrinter &AP);
+bool LowerSimMachineOperandToMCOperand(const MachineOperand &MO,
+                                       MCOperand &MCOp, const AsmPrinter &AP);
 FunctionPass *createSimISelDag(SimTargetMachine &TM, CodeGenOptLevel OptLevel);
 
 } // namespace llvm

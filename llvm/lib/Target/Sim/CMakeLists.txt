@@ -20,6 +20,7 @@ add_llvm_target(SimCodeGen
   SimAsmPrinter.cpp
   SimISelDagToDag.cpp
   SimISelLowering.cpp
+  SimMCInstLower.cpp
 
   LINK_COMPONENTS
   CodeGen
