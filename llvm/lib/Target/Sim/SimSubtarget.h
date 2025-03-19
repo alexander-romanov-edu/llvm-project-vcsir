@@ -2,6 +2,7 @@
 #define LLVM_LIB_TARGET_SIM_SIMSUBTARGET_H
 
 #include "Sim.h"
+#include "SimFrameLowering.h"
 #include "SimISelLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
@@ -12,6 +13,7 @@ namespace llvm {
 
 class SimSubtarget : public SimGenSubtargetInfo {
   SimTargetLowering TLInfo;
+  SimFrameLowering FrameLowering;
 
 public:
   SimSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
@@ -24,6 +26,10 @@ public:
   const SimTargetLowering *getTargetLowering() const override {
     SIM_DUMP_CYAN
     return &TLInfo;
+  }
+  const SimFrameLowering *getFrameLowering() const override {
+    SIM_DUMP_CYAN
+    return &FrameLowering;
   }
 };
 
