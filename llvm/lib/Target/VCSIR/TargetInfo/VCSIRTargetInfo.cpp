@@ -9,5 +9,5 @@ Target &llvm::getTheVCSIRTarget() {
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVCSIRTargetInfo() {
   RegisterTarget<Triple::vcsir> X(getTheVCSIRTarget(), "vcsir", "VCSIR 32",
-                                   "VCSIR");
+                                  "VCSIR");
 }

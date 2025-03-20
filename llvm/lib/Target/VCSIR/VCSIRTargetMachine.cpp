@@ -25,34 +25,35 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
 static Reloc::Model getEffectiveRelocModel(bool JIT,
                                            std::optional<Reloc::Model> RM) {
   if (!RM || JIT)
-     return Reloc::Static;
+    return Reloc::Static;
   return *RM;
 }
 
 VCSIRTargetMachine::VCSIRTargetMachine(const Target &T, const Triple &TT,
-                                         StringRef CPU, StringRef FS,
-                                         const TargetOptions &Options,
-                                         std::optional<Reloc::Model> RM,
-                                         std::optional<CodeModel::Model> CM,
-                                         CodeGenOptLevel OL, bool JIT,
-                                         bool IsLittle)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, IsLittle), TT,
-                        CPU, FS, Options, getEffectiveRelocModel(JIT, RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+                                       StringRef CPU, StringRef FS,
+                                       const TargetOptions &Options,
+                                       std::optional<Reloc::Model> RM,
+                                       std::optional<CodeModel::Model> CM,
+                                       CodeGenOptLevel OL, bool JIT,
+                                       bool IsLittle)
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, IsLittle),
+                               TT, CPU, FS, Options,
+                               getEffectiveRelocModel(JIT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
   initAsmInfo();
 }
 
 VCSIRTargetMachine::VCSIRTargetMachine(const Target &T, const Triple &TT,
-                                         StringRef CPU, StringRef FS,
-                                         const TargetOptions &Options,
-                                         std::optional<Reloc::Model> RM,
-                                         std::optional<CodeModel::Model> CM,
-                                         CodeGenOptLevel OL, bool JIT)
+                                       StringRef CPU, StringRef FS,
+                                       const TargetOptions &Options,
+                                       std::optional<Reloc::Model> RM,
+                                       std::optional<CodeModel::Model> CM,
+                                       CodeGenOptLevel OL, bool JIT)
     : VCSIRTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
 
 TargetPassConfig *VCSIRTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new TargetPassConfig(*this, PM);
 }
 
-}
+} // namespace llvm

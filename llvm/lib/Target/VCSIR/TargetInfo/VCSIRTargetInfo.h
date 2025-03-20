@@ -4,8 +4,7 @@ namespace llvm {
 
 class Target;
 
-Target& getTheVCSIRTarget();
+Target &getTheVCSIRTarget();
 
 } // end namespace llvm
 #endif // end LLVM_LIB_TARGET_VCSIR_TARGETINFO_VCSIRTARGETINFO_H
-

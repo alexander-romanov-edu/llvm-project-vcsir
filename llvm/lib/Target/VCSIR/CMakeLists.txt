@@ -1,10 +1,12 @@
 add_llvm_component_group(VCSIR)
 
-add_subdirectory(TargetInfo)
-add_subdirectory(MCTargetDesc)
+set(LLVM_TARGET_DEFINITIONS VCSIR.td)
+tablegen(LLVM VCSIRGenRegisterInfo.inc -gen-register-info)
+add_public_tablegen_target(VCSIRCommonTableGen)
 
 add_llvm_target(VCSIRCodeGen
   VCSIRTargetMachine.cpp
+  VCSIRRegisterInfo.cpp
   LINK_COMPONENTS
   CodeGen
   Core
@@ -14,3 +16,6 @@ add_llvm_target(VCSIRCodeGen
   ADD_TO_COMPONENT
   VCSIR
 )
+
+add_subdirectory(TargetInfo)
+add_subdirectory(MCTargetDesc)
