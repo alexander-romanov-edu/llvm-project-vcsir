@@ -10,6 +10,8 @@
 #include "MCTargetDesc/VCSIRBaseInfo.h"
 
 #include "TargetInfo/VCSIRTargetInfo.h"
+#include "VCSIRMCAsmInfo.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -46,8 +48,19 @@ createVCSIRMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   return createVCSIRMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
+static MCAsmInfo *createVCSIRMCAsmInfo(const MCRegisterInfo &MRI,
+                                       const Triple &TT,
+                                       const MCTargetOptions &Options) {
+  MCAsmInfo *MAI = new VCSIRELFMCAsmInfo(TT);
+  unsigned SP = MRI.getDwarfRegNum(VCSIR::X1, true);
+  MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, SP, 0);
+  MAI->addInitialFrameState(Inst);
+  return MAI;
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVCSIRTargetMC() {
   Target &TheVCSIRTarget = getTheVCSIRTarget();
+  RegisterMCAsmInfoFn X(TheVCSIRTarget, createVCSIRMCAsmInfo);
   TargetRegistry::RegisterMCRegInfo(TheVCSIRTarget, createVCSIRMCRegisterInfo);
   TargetRegistry::RegisterMCInstrInfo(TheVCSIRTarget, createVCSIRMCInstrInfo);
   TargetRegistry::RegisterMCSubtargetInfo(TheVCSIRTarget,
