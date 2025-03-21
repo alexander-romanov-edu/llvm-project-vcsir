@@ -12,6 +12,7 @@
 #include "TargetInfo/VCSIRTargetInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 
@@ -25,6 +26,9 @@ using namespace llvm;
 #include "VCSIRGenInstrInfo.inc"
 #undef GET_INSTRINFO_ENUM
 
+#define GET_SUBTARGETINFO_MC_DESC
+#include "VCSIRGenSubtargetInfo.inc"
+
 static MCRegisterInfo *createVCSIRMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
   InitVCSIRMCRegisterInfo(X, VCSIR::X1);
@@ -37,8 +41,15 @@ static MCInstrInfo *createVCSIRMCInstrInfo() {
   return X;
 }
 
+static MCSubtargetInfo *
+createVCSIRMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
+  return createVCSIRMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVCSIRTargetMC() {
   Target &TheVCSIRTarget = getTheVCSIRTarget();
   TargetRegistry::RegisterMCRegInfo(TheVCSIRTarget, createVCSIRMCRegisterInfo);
   TargetRegistry::RegisterMCInstrInfo(TheVCSIRTarget, createVCSIRMCInstrInfo);
+  TargetRegistry::RegisterMCSubtargetInfo(TheVCSIRTarget,
+                                          createVCSIRMCSubtargetInfo);
 }

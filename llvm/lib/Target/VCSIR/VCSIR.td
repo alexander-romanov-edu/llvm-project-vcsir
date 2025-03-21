@@ -10,5 +10,10 @@ include "llvm/Target/Target.td"
 include "VCSIRRegisterInfo.td"
 include "VCSIRInstrInfo.td"
 
+class Proc<string Name, list<SubtargetFeature> Features>
+ : Processor<Name, NoItineraries, Features>;
+ 
+def : Proc<"generic", []>;
+
 def VCSIRInstrInfo : InstrInfo;
 def VCSIR : Target { let InstructionSet = VCSIRInstrInfo; }
