@@ -3,5 +3,10 @@
 
 #define GET_REGINFO_ENUM
 #include "VCSIRGenRegisterInfo.inc"
+#undef GET_REGINFO_ENUM
+
+#define GET_INSTRINFO_ENUM
+#include "VCSIRGenInstrInfo.inc"
+#undef GET_INSTRINFO_ENUM
 
 #endif // LLVM_LIB_TARGET_VCSIR_MCTARGETDESC_VCSIRMCTARGETDESC_H

@@ -20,3 +20,7 @@ let Namespace =
 foreach I = 0 -31 in { def X#I : VCSIRReg<I, "x"#I>; }
 
 def GPR : RegisterClass<"VCSIR", [i32], 32, (add(sequence "X%u", 0, 31))>;
+def SP : RegisterClass<"VCSIR", [i32], 1, (add X2)> {
+  let DiagnosticType = "InvalidRegClassSP";
+  let DiagnosticString = "register must be sp (x2)";
+}
