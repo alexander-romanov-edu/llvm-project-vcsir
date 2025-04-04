@@ -23,7 +23,7 @@ VCSIRSubtarget::VCSIRSubtarget(const Triple &TT, const StringRef &CPU,
                                const TargetMachine &TM)
     : VCSIRGenSubtargetInfo(TT, CPU, TuneCPU, FS), FrameLowering(*this),
       InstrInfo(*this), RegInfo(), TLInfo(TM, *this),
-      TSInfo(std::make_unique<VCSIRSelectionDAGInfo>()) {}
+      TSInfo() {}
 
 const SelectionDAGTargetInfo *VCSIRSubtarget::getSelectionDAGInfo() const {
   return TSInfo.get();
