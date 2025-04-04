@@ -1,4 +1,4 @@
-//===-- VCSIRInstrInfo.td - Target Description for RISC-V --*- tablegen -*-===//
+//===-- VCSIRInstrInfo.td - Target Description for VCSIR --*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file describes the RISC-V instructions in TableGen format.
+// This file describes the VCSIR instructions in TableGen format.
 //
 //===----------------------------------------------------------------------===//
 
@@ -184,8 +184,6 @@ def UImmLog2XLenAsmOperand : AsmOperandClass {
 }
 
 def uimmlog2xlen : VCSIROp, ImmLeaf<i32, [{
-  if (Subtarget->is64Bit())
-    return isUInt<6>(Imm);
   return isUInt<5>(Imm);
 }]> {
   let ParserMatchClass = UImmLog2XLenAsmOperand;
@@ -314,6 +312,7 @@ def PseudoJumpSymbol : AsmOperandClass {
 def pseudo_jump_symbol : Operand<i32> {
   let ParserMatchClass = PseudoJumpSymbol;
 }
+
 
 // A parameterized register class alternative to i32imm/i64imm from Target.td.
 def ixlenimm : Operand<i32>;
@@ -452,6 +451,36 @@ include "VCSIRInstrFormats.td"
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
+def IntCCtoVCSIRCC : SDNodeXForm<vcsir_selectcc, [{
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  VCSIRCC::CondCode BrCC = getVCSIRCCForIntCC(CC);
+  return CurDAG->getTargetConstant(BrCC, SDLoc(N), Subtarget->getXLenVT());
+}]>;
+
+def vcsir_selectcc_frag : PatFrag<(ops node:$lhs, node:$rhs, node:$cc,
+                                       node:$truev, node:$falsev),
+                                  (vcsir_selectcc node:$lhs, node:$rhs,
+                                                  node:$cc, node:$truev,
+                                                  node:$falsev), [{}],
+                                  IntCCtoVCSIRCC>;
+
+multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
+  let usesCustomInserter = 1 in
+  def _Using_CC_GPR : Pseudo<(outs valty:$dst),
+                             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
+                              valty:$truev, valty:$falsev),
+                             [(set valty:$dst,
+                               (vcsir_selectcc_frag:$cc (XLenVT GPR:$lhs), GPR:$rhs, cond,
+                                                        (vt valty:$truev), valty:$falsev))]>;
+  // Explicitly select 0 in the condition to X0. The register coalescer doesn't
+  // always do it.
+  def : Pat<(vcsir_selectcc_frag:$cc (XLenVT GPR:$lhs), 0, cond, (vt valty:$truev),
+                                     valty:$falsev),
+            (!cast<Instruction>(NAME#"_Using_CC_GPR") GPR:$lhs, (XLenVT X0),
+             (IntCCtoVCSIRCC $cc), valty:$truev, valty:$falsev)>;
+}
+
+defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
 
 let hasSideEffects = 0, mayLoad = 0,
     mayStore = 0 in class BranchCC_rri<bits<3> funct3, string opcodestr>
@@ -834,28 +863,13 @@ def : PatGprUimmLog2XLen<shl, SLLI>;
 def : PatGprUimmLog2XLen<srl, SRLI>;
 def : PatGprUimmLog2XLen<sra, SRAI>;
 
-// Match both a plain shift and one where the shift amount is masked (this is
-// typically introduced when the legalizer promotes the shift amount and
-// zero-extends it). For RISC-V, the mask is unnecessary as shifts in the base
-// ISA only read the least significant 5 bits (RV32I) or 6 bits (RV64I).
-def shiftMaskXLen : ComplexPattern<i32, 1, "selectShiftMaskXLen", [], [], 0>;
-def shiftMask32 : ComplexPattern<i64, 1, "selectShiftMask32", [], [], 0>;
-// FIXME: This is labelled as handling 's32', however the ComplexPattern it
-// refers to handles both i32 and i64 based on the HwMode. Currently this LLT
-// parameter appears to be ignored so this pattern works for both, however we
-// should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
-// here.
+def shiftMaskXLen : ComplexPattern<XLenVT, 1, "selectShiftMaskXLen", [], [], 0>;
 def GIShiftMaskXLen : GIComplexOperandMatcher<s32, "selectShiftMaskXLen">,
                       GIComplexPatternEquiv<shiftMaskXLen>;
-def GIShiftMask32 : GIComplexOperandMatcher<s64, "selectShiftMask32">,
-                    GIComplexPatternEquiv<shiftMask32>;
 
 class shiftop<SDPatternOperator operator>
     : PatFrag<(ops node:$val, node:$count),
               (operator node:$val, (i32(shiftMaskXLen node:$count)))>;
-class shiftopw<SDPatternOperator operator>
-    : PatFrag<(ops node:$val, node:$count),
-              (operator node:$val, (i64(shiftMask32 node:$count)))>;
 
 def : PatGprGpr<shiftop<shl>, SLL>;
 def : PatGprGpr<shiftop<srl>, SRL>;
@@ -922,7 +936,7 @@ def : PatGprSimm12<setlt, SLTI>;
 def : PatGprGpr<setult, SLTU>;
 def : PatGprSimm12<setult, SLTIU>;
 
-// RISC-V doesn't have general instructions for integer setne/seteq, but we can
+// VCSIR doesn't have general instructions for integer setne/seteq, but we can
 // check for equality with 0. These ComplexPatterns rewrite the setne/seteq into
 // something that can be compared with 0.
 // These ComplexPatterns must be used in pairs.
@@ -930,16 +944,10 @@ def vcsir_setne : ComplexPattern<i32, 1, "selectSETNE", [setcc]>;
 def vcsir_seteq : ComplexPattern<i32, 1, "selectSETEQ", [setcc]>;
 
 // Define pattern expansions for setcc operations that aren't directly
-// handled by a RISC-V instruction.
+// handled by a VCSIR instruction.
 def : Pat<(vcsir_seteq(i32 GPR:$rs1)), (SLTIU GPR:$rs1, 1)>;
 def : Pat<(vcsir_setne(i32 GPR:$rs1)), (SLTU(i32 X0), GPR:$rs1)>;
 def : Pat<(i32(setne(i32 GPR:$rs1), -1)), (SLTIU GPR:$rs1, -1)>;
-
-def IntCCtoVCSIRCC : SDNodeXForm<vcsir_selectcc, [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  VCSIRCC::CondCode BrCC = getVCSIRCCForIntCC(CC);
-  return CurDAG->getTargetConstant(BrCC, SDLoc(N), Subtarget->geti32());
-}]>;
 
 /// Branches and jumps
 
@@ -959,10 +967,9 @@ let isCall = 1, Defs = [X1], isCodeGenOnly = 0,
     : Pseudo<(outs), (ins call_symbol:$func), [], "call", "$func">,
     Sched<[]>;
 
-let isBarrier = 1, isReturn = 1,
-    isTerminator =
-        1 in def PseudoRET : Pseudo<(outs), (ins), [(vcsir_ret_glue)]>,
-    PseudoInstExpansion<(JALR X0, X1, 0)>;
+let isBarrier = 1, isReturn = 1, isTerminator = 1 in
+def PseudoRET : Pseudo<(outs), (ins), [(vcsir_ret_glue)]>,
+                PseudoInstExpansion<(JALR X0, X1, 0)>;
 
 let isCall = 0, isBarrier = 1, isBranch = 1, isTerminator = 1, Size = 8,
     isCodeGenOnly = 0, hasSideEffects = 0, mayStore = 0,
@@ -970,6 +977,16 @@ let isCall = 0, isBarrier = 1, isBranch = 1, isTerminator = 1, Size = 8,
     : Pseudo<(outs GPR:$rd), (ins pseudo_jump_symbol:$target), [], "jump",
              "$target, $rd">,
     Sched<[]>;
+// PseudoCALLReg is a generic pseudo instruction for calls which will eventually
+// expand to auipc and jalr while encoding, with any given register used as the
+// destination.
+// Define AsmString to print "call" when compile with -S flag.
+// Define isCodeGenOnly = 0 to support parsing assembly "call" instruction.
+let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoCALLReg : Pseudo<(outs GPR:$rd), (ins call_symbol:$func), [],
+                           "call", "$rd, $func">,
+                    Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
 // Pseudo for a rematerializable constant materialization sequence.
 // This is an experimental feature enabled by
@@ -1009,3 +1026,44 @@ let Defs = [X2], Uses = [X2] in {
   def ADJCALLSTACKUP : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                               [(callseq_end timm:$amt1, timm:$amt2)]>;
 } // Defs = [X2], Uses = [X2]
+def vcsir_mulhsu : SDNode<"VCSIRISD::MULHSU", SDTIntBinOp>;
+def vcsir_divw  : SDNode<"VCSIRISD::DIVW",  SDT_VCSIRIntBinOpW>;
+def vcsir_divuw : SDNode<"VCSIRISD::DIVUW", SDT_VCSIRIntBinOpW>;
+def vcsir_remuw : SDNode<"VCSIRISD::REMUW", SDT_VCSIRIntBinOpW>;
+
+//===----------------------------------------------------------------------===//
+// Instructions
+//===----------------------------------------------------------------------===//
+
+def MUL     : ALU_rr<0b0000001, 0b000, "mul", Commutable=1>,
+              Sched<[WriteIMul, ReadIMul, ReadIMul]>;
+def MULH    : ALU_rr<0b0000001, 0b001, "mulh", Commutable=1>,
+              Sched<[WriteIMul, ReadIMul, ReadIMul]>;
+def MULHSU  : ALU_rr<0b0000001, 0b010, "mulhsu">,
+              Sched<[WriteIMul, ReadIMul, ReadIMul]>;
+def MULHU   : ALU_rr<0b0000001, 0b011, "mulhu", Commutable=1>,
+              Sched<[WriteIMul, ReadIMul, ReadIMul]>;
+def DIV     : ALU_rr<0b0000001, 0b100, "div">,
+              Sched<[WriteIDiv, ReadIDiv, ReadIDiv]>;
+def DIVU    : ALU_rr<0b0000001, 0b101, "divu">,
+              Sched<[WriteIDiv, ReadIDiv, ReadIDiv]>;
+def REM     : ALU_rr<0b0000001, 0b110, "rem">,
+              Sched<[WriteIRem, ReadIRem, ReadIRem]>;
+def REMU    : ALU_rr<0b0000001, 0b111, "remu">,
+              Sched<[WriteIRem, ReadIRem, ReadIRem]>;
+
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//===----------------------------------------------------------------------===//
+
+def : PatGprGpr<mul, MUL>;
+def : PatGprGpr<mulhs, MULH>;
+def : PatGprGpr<mulhu, MULHU>;
+def : PatGprGpr<vcsir_mulhsu, MULHSU>;
+
+def : PatGprGpr<sdiv, DIV>;
+def : PatGprGpr<udiv, DIVU>;
+def : PatGprGpr<srem, REM>;
+def : PatGprGpr<urem, REMU>;
+
+include "VCSIRInstrGISel.td"

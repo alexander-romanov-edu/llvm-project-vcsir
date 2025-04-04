@@ -1333,6 +1333,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return (IsLittleEndian ? "elf64-powerpcle" : "elf64-powerpc");
     case ELF::EM_RISCV:
       return "elf64-littleriscv";
+    case ELF::EM_VCSIR:
+      return "elf32-vcsir";
     case ELF::EM_S390:
       return "elf64-s390";
     case ELF::EM_SPARCV9:
@@ -1400,6 +1402,8 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
     default:
       report_fatal_error("Invalid ELFCLASS!");
     }
+  case ELF::EM_VCSIR:
+    return Triple::vcsir;
   case ELF::EM_S390:
     return Triple::systemz;
 

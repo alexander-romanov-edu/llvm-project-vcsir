@@ -83,7 +83,9 @@ clang_tablegen(BuiltinsNVPTX.inc -gen-clang-builtins
 clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
   SOURCE BuiltinsRISCV.td
   TARGET ClangBuiltinsRISCV)
-
+clang_tablegen(BuiltinsVCSIR.inc -gen-clang-builtins
+  SOURCE BuiltinsVCSIR.td
+  TARGET ClangBuiltinsVCSIR)
 clang_tablegen(BuiltinsSPIRV.inc -gen-clang-builtins
   SOURCE BuiltinsSPIRV.td
   TARGET ClangBuiltinsSPIRV)

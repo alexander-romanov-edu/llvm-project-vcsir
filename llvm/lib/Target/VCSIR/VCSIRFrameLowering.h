@@ -1,28 +1,104 @@
-#ifndef LLVM_LIB_TARGET_VCSIR_SIMFRAMELOWERING_H
-#define LLVM_LIB_TARGET_VCSIR_SIMFRAMELOWERING_H
+//===-- VCSIRFrameLowering.h - Define frame lowering for VCSIR -*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This class implements VCSIR specific bits of TargetFrameLowering class.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIB_TARGET_VCSIR_VCSIRFRAMELOWERING_H
+#define LLVM_LIB_TARGET_VCSIR_VCSIRFRAMELOWERING_H
 
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/Support/TypeSize.h"
 
 namespace llvm {
+class VCSIRSubtarget;
 
 class VCSIRFrameLowering : public TargetFrameLowering {
 public:
-  explicit VCSIRFrameLowering()
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(4), 0) {}
+  explicit VCSIRFrameLowering(const VCSIRSubtarget &STI);
 
-  /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
-  /// the function.
-  void emitPrologue(MachineFunction &MF,
-                    MachineBasicBlock &MBB) const override {}
-  void emitEpilogue(MachineFunction &MF,
-                    MachineBasicBlock &MBB) const override {}
+  void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
+  void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
-  /// hasFP - Return true if the specified function should have a dedicated
-  /// frame pointer register. For most targets this is true only if the function
-  /// has variable sized allocas or if frame pointer elimination is disabled.
-  bool hasFPImpl(const MachineFunction &MF) const override { return false; }
+  uint64_t getStackSizeWithRVVPadding(const MachineFunction &MF) const;
+
+  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
+                                     Register &FrameReg) const override;
+
+  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                            RegScavenger *RS) const override;
+
+  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
+                                           RegScavenger *RS) const override;
+
+  bool hasBP(const MachineFunction &MF) const;
+
+  bool hasReservedCallFrame(const MachineFunction &MF) const override;
+  MachineBasicBlock::iterator
+  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI) const override;
+
+  bool assignCalleeSavedSpillSlots(MachineFunction &MF,
+                                   const TargetRegisterInfo *TRI,
+                                   std::vector<CalleeSavedInfo> &CSI,
+                                   unsigned &MinCSFrameIndex,
+                                   unsigned &MaxCSFrameIndex) const override;
+  bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MI,
+                                 ArrayRef<CalleeSavedInfo> CSI,
+                                 const TargetRegisterInfo *TRI) const override;
+  bool
+  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
+                              const TargetRegisterInfo *TRI) const override;
+
+  // Get the first stack adjustment amount for SplitSPAdjust.
+  // Return 0 if we don't want to split the SP adjustment in prologue and
+  // epilogue.
+  uint64_t getFirstSPAdjustAmount(const MachineFunction &MF) const;
+
+  bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
+  bool canUseAsEpilogue(const MachineBasicBlock &MBB) const override;
+
+  bool enableShrinkWrapping(const MachineFunction &MF) const override;
+
+  bool isSupportedStackID(TargetStackID::Value ID) const override;
+
+  bool isStackIdSafeForLocalArea(unsigned StackId) const override {
+    // We don't support putting VCSIR Vector objects into the pre-allocated
+    // local frame block at the moment.
+    return StackId != TargetStackID::ScalableVector;
+  }
+
+  void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     MachineFunction &MF, uint64_t Offset,
+                     uint64_t RealStackSize, bool EmitCFI, bool NeedProbe,
+                     uint64_t ProbeSize, bool DynAllocation) const;
+
+protected:
+  const VCSIRSubtarget &STI;
+
+  bool hasFPImpl(const MachineFunction &MF) const override;
+
+private:
+  void determineFrameLayout(MachineFunction &MF) const;
+  template <typename Emitter>
+  void emitCFIForCSI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     const SmallVector<CalleeSavedInfo, 8> &CSI) const;
+  void deallocateStack(MachineFunction &MF, MachineBasicBlock &MBB,
+                       MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+                       uint64_t &StackSize, int64_t CFAOffset) const;
+
+  // Replace a StackProbe stub (if any) with the actual probe code inline
+  void inlineStackProbe(MachineFunction &MF,
+                        MachineBasicBlock &PrologueMBB) const override;
 };
-
 } // namespace llvm
-
-#endif // LLVM_LIB_TARGET_VCSIR_SIMFRAMELOWERING_H
+#endif

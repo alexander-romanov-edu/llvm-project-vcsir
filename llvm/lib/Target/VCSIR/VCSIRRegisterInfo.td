@@ -13,11 +13,13 @@
 let Namespace =
     "VCSIR" in class VCSIRReg<bits<5> Enc, string n, list<string> alt = []>
     : Register<n> {
-  let HWEncoding{4 -0} = Enc;
+  let HWEncoding{4-0} = Enc;
   let AltNames = alt;
 }
 
 foreach I = 0 -31 in { def X#I : VCSIRReg<I, "x"#I>; }
+def XLenVT : ValueTypeByHwMode<[DefaultMode],
+                               [i32]>;
 
 def GPR : RegisterClass<"VCSIR", [i32], 32, (add(sequence "X%u", 0, 31))>;
 def SP : RegisterClass<"VCSIR", [i32], 1, (add X2)> {

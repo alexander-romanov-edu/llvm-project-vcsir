@@ -1,9 +1,19 @@
 add_llvm_component_library(LLVMVCSIRDesc
   VCSIRTargetDesc.cpp
   VCSIRMCAsmInfo.cpp
+  VCSIRInstPrinter.cpp
+  VCSIRAsmBackend.cpp
+  VCSIRELFStreamer.cpp
+  VCSIRTargetStreamer.cpp
+  VCSIRMatInt.cpp
+  VCSIRCodeEmitter.cpp
+  VCSIRELFObjectWriter.cpp
+  VCSIRMCObjectFileInfo.cpp
+  VCSIRMCExpr.cpp
   LINK_COMPONENTS
   MC
   Support
+  TargetParser
   VCSIRInfo
 
   ADD_TO_COMPONENT

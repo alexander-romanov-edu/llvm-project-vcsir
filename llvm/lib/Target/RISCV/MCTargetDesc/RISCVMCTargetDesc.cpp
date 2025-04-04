@@ -1,4 +1,4 @@
-//===-- RISCVMCTargetDesc.cpp - RISC-V Target Descriptions ----------------===//
+//===-- RISCVMCTargetDesc.cpp - RISCV Target Descriptions ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// This file provides RISC-V specific target descriptions.
+/// This file provides RISCV specific target descriptions.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "RISCVMCTargetDesc.h"
+#include "RISCVTargetDesc.h"
 #include "RISCVELFStreamer.h"
 #include "RISCVInstPrinter.h"
 #include "RISCVMCAsmInfo.h"

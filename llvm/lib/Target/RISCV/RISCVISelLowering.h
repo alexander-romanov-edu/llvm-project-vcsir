@@ -1111,7 +1111,84 @@ using namespace RISCV;
 #undef GET_RISCVVIntrinsicsTable_DECL
 
 } // end namespace RISCVVIntrinsicsTable
+template <class NodeTy>
+SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
+                                     bool IsLocal, bool IsExternWeak) const {
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
 
+  // When HWASAN is used and tagging of global variables is enabled
+  // they should be accessed via the GOT, since the tagged address of a global
+  // is incompatible with existing code models. This also applies to non-pic
+  // mode.
+  if (isPositionIndependent() || Subtarget.allowTaggedGlobals()) {
+    SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+    if (IsLocal && !Subtarget.allowTaggedGlobals())
+      // Use PC-relative addressing to access the symbol. This generates the
+      // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
+      // %pcrel_lo(auipc)).
+      return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
+
+    // Use PC-relative addressing to access the GOT for this symbol, then load
+    // the address from the GOT. This generates the pattern (PseudoLGA sym),
+    // which expands to (ld (addi (auipc %got_pcrel_hi(sym)) %pcrel_lo(auipc))).
+    SDValue Load =
+        SDValue(DAG.getMachineNode(RISCV::PseudoLGA, DL, Ty, Addr), 0);
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineMemOperand *MemOp = MF.getMachineMemOperand(
+        MachinePointerInfo::getGOT(MF),
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+            MachineMemOperand::MOInvariant,
+        LLT(Ty.getSimpleVT()), Align(Ty.getFixedSizeInBits() / 8));
+    DAG.setNodeMemRefs(cast<MachineSDNode>(Load.getNode()), {MemOp});
+    return Load;
+  }
+
+  switch (getTargetMachine().getCodeModel()) {
+  default:
+    report_fatal_error("Unsupported code model for lowering");
+  case CodeModel::Small: {
+    // Generate a sequence for accessing addresses within the first 2 GiB of
+    // address space. This generates the pattern (addi (lui %hi(sym)) %lo(sym)).
+    SDValue AddrHi = getTargetNode(N, DL, Ty, DAG, RISCVII::MO_HI);
+    SDValue AddrLo = getTargetNode(N, DL, Ty, DAG, RISCVII::MO_LO);
+    SDValue MNHi = DAG.getNode(RISCVISD::HI, DL, Ty, AddrHi);
+    return DAG.getNode(RISCVISD::ADD_LO, DL, Ty, MNHi, AddrLo);
+  }
+  case CodeModel::Medium: {
+    SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+    if (IsExternWeak) {
+      // An extern weak symbol may be undefined, i.e. have value 0, which may
+      // not be within 2GiB of PC, so use GOT-indirect addressing to access the
+      // symbol. This generates the pattern (PseudoLGA sym), which expands to
+      // (ld (addi (auipc %got_pcrel_hi(sym)) %pcrel_lo(auipc))).
+      SDValue Load =
+          SDValue(DAG.getMachineNode(RISCV::PseudoLGA, DL, Ty, Addr), 0);
+      MachineFunction &MF = DAG.getMachineFunction();
+      MachineMemOperand *MemOp = MF.getMachineMemOperand(
+          MachinePointerInfo::getGOT(MF),
+          MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+              MachineMemOperand::MOInvariant,
+          LLT(Ty.getSimpleVT()), Align(Ty.getFixedSizeInBits() / 8));
+      DAG.setNodeMemRefs(cast<MachineSDNode>(Load.getNode()), {MemOp});
+      return Load;
+    }
+
+    // Generate a sequence for accessing addresses within any 2GiB range within
+    // the address space. This generates the pattern (PseudoLLA sym), which
+    // expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
+    return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
+  }
+  case CodeModel::Large: {
+    if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(N))
+      return getLargeGlobalAddress(G, DL, Ty, DAG);
+
+    // Using pc-relative mode for other node type.
+    SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+    return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
+  }
+  }
+}
 } // end namespace llvm
 
 #endif

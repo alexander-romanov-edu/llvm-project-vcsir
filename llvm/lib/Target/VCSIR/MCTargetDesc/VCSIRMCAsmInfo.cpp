@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "VCSIRMCAsmInfo.h"
-#include "VCSIR.h"
 
 using namespace llvm;
 
